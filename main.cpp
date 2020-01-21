@@ -9,7 +9,7 @@ int main(int argc, char **argv)
 {
     QApplication app (argc, argv);
     GUI gui;
-    gui.show();
+    gui.showMaximized();
 
     return app.exec();
 }
