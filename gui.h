@@ -42,6 +42,7 @@ public:
     void openFile(const QString & filename);
     void markOccurencies(const QString & text, const QColor &color);
     void applyDiffStyle();
+    QString applyJpegStyle(const char * inByteArray, const long long size);
 
     void setCurrentFile(const QString & filename);
     void setPrevSearchedText(const QString & text);

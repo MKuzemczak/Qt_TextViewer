@@ -1,8 +1,7 @@
 #include "gui.h"
 
 #include <fstream>
-
-
+#include <sstream>
 GUI::GUI(QWidget *parent) : QMainWindow(parent)
 {
     resize(1920,600);
@@ -43,24 +42,45 @@ void GUI::createActions()
 
 void GUI::openFile(const QString &filename)
 {
-    QFile file(filename);
-    if (!file.open(QFile::ReadOnly | QFile::Text)) {
+    std::streampos size;
+    char * memblock;
+
+    std::ifstream file (filename.toStdString().c_str(), std::ios::in|std::ios::binary|std::ios::ate);
+
+    if (file.is_open())
+    {
+        size = file.tellg();
+        memblock = new char [size];
+        file.seekg (0, std::ios::beg);
+        file.read (memblock, size);
+        file.close();
+    }
+    else
+    {
         QMessageBox::warning(this, tr("Application"),
                              tr("Cannot read file %1:\n%2.")
-                             .arg(QDir::toNativeSeparators(filename), file.errorString()));
+                             .arg(QDir::toNativeSeparators(filename), ""));
         return;
     }
-
-    QTextStream in(&file);
-
-    textEdit_->setPlainText(in.readAll());
 
     setCurrentFile(filename);
 
     if (filename.length() > 5 && filename.mid(filename.length() - 5, 5) == ".diff")
     {
+        textEdit_->setPlainText(QString(memblock));
         applyDiffStyle();
     }
+    else if (filename.length() > 4 && filename.mid(filename.length() - 4, 4) == ".jpg")
+    {
+        QString jpegBytes = applyJpegStyle(memblock, size);
+        textEdit_->setPlainText(jpegBytes);
+    }
+    else
+    {
+        textEdit_->setPlainText(QString(memblock));
+    }
+
+    delete[] memblock;
 }
 
 void GUI::markOccurencies(const QString &text, const QColor &color)
@@ -281,6 +301,27 @@ void GUI::applyDiffStyle()
     }
     textEdit_->setExtraSelections(extraSelections);
     cursor.clearSelection();
+}
+
+QString GUI::applyJpegStyle(const char * inByteArray, const long long size)
+{
+    QString hexString;
+    char const hex_chars[16] = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+
+    for(unsigned int i = 0; i < size; ++i )
+    {
+        char const byte = inByteArray[i];
+
+        if (byte == (char)255 && i != 0)
+        {
+            hexString += '\n';
+        }
+        hexString += hex_chars[ ( byte & 0xF0 ) >> 4 ];
+        hexString += hex_chars[ ( byte & 0x0F ) >> 0 ];
+        hexString += ' ';
+    }
+
+    return hexString;
 }
 
 void GUI::setCurrentFile(const QString &filename)
